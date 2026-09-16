@@ -693,13 +693,16 @@ async function loadState(){
 
 /* ---------- audio ---------- */
 const Music = (function(){
-  let cur=null, enabled=true, vol=0.6, els=null, base={};
+  let cur=null, enabled=true, vol=0.6, els=null, base={}, audioCtx=null, chains={};
   function init(){
     if(els) return;
     els={};
-    TRACKS.forEach(t=>{ const a=document.getElementById(t.el); if(a){ a.loop=true; base[t.id]=.5; a.volume=.5*vol; els[t.id]=a; } });
-    const b=document.getElementById('aBattle'); if(b){ b.loop=true; base.battle=.5; b.volume=.5*vol; els.battle=b; }
-    const d=document.getElementById('aDefeat'); if(d){ d.loop=false; base.defeat=.7; d.volume=.7*vol; els.defeat=d; }
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const add=(id,baseVol,loop)=>{ const a=document.getElementById(id); if(!a) return; a.loop=loop; a.volume=baseVol*vol; const src=audioCtx.createMediaElementSource(a); const eq=audioCtx.createBiquadFilter(); eq.type='highshelf'; eq.frequency.value=3200; eq.gain.value=2.5; const comp=audioCtx.createDynamicsCompressor(); comp.threshold.value=-18; comp.knee.value=10; comp.ratio.value=2.5; comp.attack.value=.003; comp.release.value=.12; src.connect(eq); eq.connect(comp); comp.connect(audioCtx.destination); chains[id]=true;  };
+    TRACKS.forEach(t=>{ const a=document.getElementById(t.el); if(a && !chains[t.el]){ base[t.id]=.5; add(t.el,.5,true); } });
+    TRACKS.forEach(t=>{ const a=document.getElementById(t.el); if(a) els[t.id]=a; });
+    const b=document.getElementById('aBattle'); if(b && !chains.aBattle){ base.battle=.5; add('aBattle',.5,true); els.battle=b; }
+    const d=document.getElementById('aDefeat'); if(d && !chains.aDefeat){ base.defeat=.7; add('aDefeat',.7,false); els.defeat=d; }
   }
   function applyVolume(){ for(const k in els) els[k].volume = (base[k]||.5)*vol; }
   function stopAll(except){ for(const k in els){ if(k===except) continue; els[k].pause(); els[k].currentTime=0; } }
@@ -733,7 +736,7 @@ const SFX = (function(){
   function init(){
     if(ctx) return;
     ctx=new (window.AudioContext||window.webkitAudioContext)();
-    gain=ctx.createGain(); gain.gain.value=vol; gain.connect(ctx.destination);
+    gain=ctx.createGain(); gain.gain.value=vol; gain.connect(ctx.destination); if(ctx.state==='suspended') ctx.resume().catch(()=>{});
   }
   function tone(freq,dur,type,peak,delay){
     if(!ctx) return;
@@ -756,18 +759,52 @@ const SFX = (function(){
     const g=ctx.createGain(); g.gain.value=peak||.3;
     src.connect(g); g.connect(gain); src.start();
   }
+  function wake(){ if(ctx&&ctx.state==='suspended') ctx.resume().catch(()=>{}); }
+  function sweep(start,end,dur,type,peak){
+    if(!ctx) return; wake();
+    const o=ctx.createOscillator(), g=ctx.createGain(), t0=ctx.currentTime;
+    o.type=type||'sawtooth'; o.frequency.setValueAtTime(start,t0); o.frequency.exponentialRampToValueAtTime(Math.max(20,end),t0+dur);
+    g.gain.setValueAtTime(.0001,t0); g.gain.exponentialRampToValueAtTime(peak||.22,t0+.008); g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    o.connect(g); g.connect(gain); o.start(t0); o.stop(t0+dur+.03);
+  }
+  function burst(freq,dur,peak){ tone(freq,dur,'square',peak); noise(Math.min(.08,dur),peak*.35); }
   return {
     init,
     setVolume(v){ vol=v; if(gain) gain.gain.value=v; },
-    fire(){ tone(520,.08,'square',.22); },
-    hit(){ tone(180,.1,'sawtooth',.25); noise(.06,.12); },
-    ko(){ tone(300,.1,'square',.2,0); tone(160,.22,'square',.22,.08); },
+    attack(kind){
+      wake();
+      if(kind==='arc') { sweep(180,70,.16,'sawtooth',.28); tone(90,.18,'sine',.12,.03); }
+      else if(kind==='random') { burst(130,.12,.25); sweep(420,110,.22,'triangle',.2,.02); }
+      else if(kind==='punch') { sweep(240,90,.12,'sawtooth',.3); noise(.09,.16); }
+      else if(kind==='boomerang') { sweep(720,260,.18,'triangle',.2); }
+      else if(kind==='pierce') { sweep(900,260,.1,'square',.2); }
+      else if(kind==='spread') { tone(460,.07,'square',.18); tone(620,.09,'square',.14,.045); }
+      else if(kind==='homing') { sweep(500,850,.2,'sine',.18); }
+      else if(kind==='katana') { sweep(1200,180,.12,'sawtooth',.28); }
+      else { burst(520,.08,.22); }
+    },
+    fire(){ burst(520,.08,.22); },
+    hit(){ sweep(210,90,.09,'sawtooth',.25); noise(.055,.13); },
+    ko(){ tone(300,.1,'square',.2); tone(160,.22,'square',.22,.08); },
     pickup(){ tone(700,.07,'triangle',.22); tone(980,.09,'triangle',.2,.06); },
-    ult(){ tone(220,.15,'sine',.25); tone(440,.2,'sine',.2,.08); tone(660,.25,'sine',.18,.16); },
-    dash(){ noise(.12,.18); },
+    ult(kind){
+      wake();
+      const k=kind||'';
+      if(k==='szamoci'){ sweep(140,620,.4,'sawtooth',.25); noise(.25,.18); }
+      else if(k==='nyx'){ sweep(900,180,.28,'sine',.25); }
+      else if(k==='eribun'){ for(let i=0;i<4;i++) tone(420+i*150,.12,'triangle',.16,i*.06); }
+      else if(k==='luna'){ sweep(90,1200,.65,'sine',.3); }
+      else if(k==='reka'){ tone(180,.45,'sine',.2); tone(360,.5,'sine',.18,.12); tone(720,.55,'sine',.15,.24); }
+      else if(k==='krisztian'){ burst(100,.35,.28); tone(220,.35,'square',.18,.08); }
+      else if(k==='racksdoubled'){ sweep(70,25,.5,'sawtooth',.32); noise(.35,.25); }
+      else { tone(220,.15,'sine',.25); tone(440,.2,'sine',.2,.08); tone(660,.25,'sine',.18,.16); }
+    },
+    partner(){ sweep(180,520,.14,'triangle',.25); },
+    partnerHit(){ burst(120,.1,.3); sweep(260,70,.12,'sawtooth',.22); },
+    dash(){ noise(.12,.18); sweep(700,180,.16,'triangle',.16); },
     click(){ tone(880,.04,'square',.12); },
-    win(){ tone(523,.12,'triangle',.22,0); tone(659,.12,'triangle',.22,.12); tone(784,.2,'triangle',.24,.24); },
-    lose(){ tone(300,.2,'sawtooth',.2,0); tone(220,.25,'sawtooth',.2,.15); }
+    win(){ tone(523,.12,'triangle',.22); tone(659,.12,'triangle',.22,.12); tone(784,.2,'triangle',.24,.24); },
+    lose(){ tone(300,.2,'sawtooth',.2); tone(220,.25,'sawtooth',.2,.15); }
   };
 })();
 
@@ -1267,16 +1304,16 @@ function shoot(){
   const now=performance.now(), cfg=pUnit.cfg;
   if(now-lastShot < cfg.cd) return;      // cd 0 for Racksdoubled = true spam
   lastShot=now;
-  fire(pUnit, aim());
-  SFX.fire();
+  fire(pUnit, aim(), mouseW.clone());
+  SFX.attack(pUnit.cfg.atk);
 }
-function fire(u, dir){
+function fire(u, dir, target){
   const cfg=u.cfg;
   let mult = (performance.now()<u.dmgUntil?1.5:1) * (u.isPlayer?1:(settings.hard?.85:.65));
   const dmg=cfg.dmg*mult;
   const from=u.mesh.position.clone().setY(.75);
   const col=u.accent;
-  switch(cfg.atk){
+  switch(String(cfg.atk).toLowerCase()){
     case 'boomerang':{
       const m=new THREE.Mesh(box(.16,.16,.16),matE(col));
       m.position.copy(from).addScaledVector(dir,.5); scene.add(m);
@@ -1284,7 +1321,13 @@ function fire(u, dir){
       break;}
     case 'arc':{
       const m=new THREE.Mesh(sph(.13),matE(col)); m.position.copy(from); scene.add(m);
-      projs.push({m,dir:dir.clone(),sp:5.5,life:2.4,owner:u,dmg,type:'arc',vy:3,g:-6.5});
+      const goal=(u.isPlayer&&target)?target.clone():u._botTarget?u._botTarget.clone():from.clone().addScaledVector(dir,5.5);
+      goal.y=0;
+      const dx=goal.x-from.x, dz=goal.z-from.z, dist=Math.hypot(dx,dz);
+      const flight=Math.max(.42,Math.min(1.05,.38+dist*.075));
+      const horiz=Math.max(.001,dist)/flight;
+      const d2=dist>.001?new THREE.Vector3(dx/dist,0,dz/dist):dir.clone();
+      projs.push({m,dir:d2,sp:horiz,life:flight+.08,owner:u,dmg,type:'lob',start:from.clone(),target:goal,flight,t:0});
       break;}
     case 'pierce':{
       const m=new THREE.Mesh(cyl(.05,.05,.34,8),matE(col));
@@ -1311,16 +1354,22 @@ function fire(u, dir){
       projs.push({m,dir:dir.clone(),sp:11,life:.55,owner:u,dmg,type:'straight'});
       break;}
     case 'punch':{
-      // partner throws two quick short-range hooks
-      for(let i=0;i<2;i++){
-        setTimeout(()=>{
-          if(!gameOn||!u.alive) return;
-          const m=new THREE.Mesh(sph(.19,12),matE(0xd94f4f));
-          m.position.copy(u.mesh.position).setY(.75).addScaledVector(dir,.6); scene.add(m);
-          projs.push({m,dir:dir.clone(),sp:8,life:.26,owner:u,dmg,type:'straight'});
-          u.partnerPhase=1;
-        }, i*170);
-      }
+      // Réka fires her partner's close-range attack as a visible projectile.
+      // It travels only a short distance, so it stays a close-range weapon.
+      const m=new THREE.Mesh(sph(.16,12),matE(u.accent));
+      m.position.copy(from).addScaledVector(dir,.55);
+      scene.add(m);
+      projs.push({
+        m,
+        dir:dir.clone().setY(0).normalize(),
+        sp:12,
+        life:.24,
+        owner:u,
+        dmg:dmg*1.35,
+        type:'rekaShot',
+        hit:new Set()
+      });
+      SFX.partner();
       break;}
     case 'random':{
       const t=KRISZ_THROWS[Math.floor(Math.random()*KRISZ_THROWS.length)];
@@ -1332,7 +1381,12 @@ function fire(u, dir){
         m=new THREE.Mesh(sph(t.size,12),matE(t.color));
       }
       m.position.copy(from).addScaledVector(dir,.5); scene.add(m);
-      projs.push({m,dir:dir.clone(),sp:7.5,life:2.2,owner:u,dmg:t.dmg*(u.isPlayer?1:.7),type:'arc',vy:2.4,g:-5.2,spin:true});
+      const goal=(u.isPlayer&&target)?target.clone():u._botTarget?u._botTarget.clone():from.clone().addScaledVector(dir,5);
+      goal.y=0;
+      const dx=goal.x-from.x,dz=goal.z-from.z,dist=Math.hypot(dx,dz);
+      const flight=Math.max(.5,Math.min(1.15,.42+dist*.07));
+      const d2=dist>.001?new THREE.Vector3(dx/dist,0,dz/dist):dir.clone();
+      projs.push({m,dir:d2,sp:Math.max(.001,dist)/flight,life:flight+.08,owner:u,dmg:t.dmg*(u.isPlayer?1:.7),type:'lob',start:from.clone(),target:goal,flight,t:0,spin:true});
       if(u.isPlayer) toast('Threw: '+t.name.toUpperCase()+'  ('+Math.round(t.dmg)+' dmg)');
       break;}
     case 'katana':{
@@ -1358,8 +1412,8 @@ function dash(){
 function useUlt(){
   if(!gameOn||pUnit.ult<100) return;
   pUnit.ult=0;
-  SFX.ult();
   const now=performance.now(), dir=aim(), k=pUnit.key;
+  SFX.ult(k);
   if(k==='vael'){
     pUnit.immuneUntil=now+400; pUnit.dmgReduce=now+3200; pUnit.speedUntil=now+3200;
     const sh=new THREE.Mesh(sph(.95,18),mat(0x9fd8ff,{transparent:true,opacity:.26,emissive:0x4fe3ff,emissiveIntensity:.5}));
@@ -1371,7 +1425,10 @@ function useUlt(){
       const d=dir.clone().applyAxisAngle(new THREE.Vector3(0,1,0),(Math.random()-.5)*1.7);
       const m=new THREE.Mesh(sph(.13),matE(pUnit.accent));
       m.position.copy(player.position).setY(.75); scene.add(m);
-      projs.push({m,dir:d,sp:4+Math.random()*2.4,life:2.2,owner:pUnit,dmg:20,type:'arc',vy:2.6+Math.random(),g:-6.5});
+      const goal=mouseW.clone(); goal.x += (Math.random()-.5)*2.0; goal.z += (Math.random()-.5)*2.0; goal.y=0;
+      const dx=goal.x-player.position.x,dz=goal.z-player.position.z,dist=Math.hypot(dx,dz),flight=Math.max(.5,Math.min(1.1,.45+dist*.065));
+      const td=dist>.001?new THREE.Vector3(dx/dist,0,dz/dist):d;
+      projs.push({m,dir:td,sp:Math.max(.001,dist)/flight,life:flight+.08,owner:pUnit,dmg:20,type:'lob',start:player.position.clone().setY(.75),target:goal,flight,t:0});
     }
   }
   else if(k==='nyx'){
@@ -1591,6 +1648,24 @@ function loop(t){
   /* bots */
   units.forEach(u=>{ if(!u.isPlayer&&u.alive) bot(u,dt,now,t); });
 
+  /* Réka partner attack */
+  for(const u of units){
+    if(!u.alive||!u.partnerAttack) continue;
+    const a=u.partnerAttack; a.t+=dt;
+    const p=Math.min(1,a.t/a.dur);
+    const eased=1-Math.pow(1-p,3);
+    const pos=a.start.clone().lerp(a.target,eased);
+    if(a.base) a.base.position.set(pos.x-u.mesh.position.x,.62,pos.z-u.mesh.position.z);
+    if(p>=.45 && !a.hitDone){
+      a.hitDone=true;
+      units.forEach(v=>{ if(!v.alive||v===u) return; if(fd(pos,v.mesh.position)<.9){ hurt(v,u.cfg.dmg*1.35); if(u.isPlayer){pUnit.ult=Math.min(100,pUnit.ult+10); SFX.partnerHit(); puff(v.mesh.position.clone(),u.accent); } } });
+    }
+    if(p>=1){
+      if(a.base) a.base.position.set(-.62,.62,0);
+      u.partnerAttack=null;
+    }
+  }
+
   /* minions (ginger kid) */
   for(let i=minions.length-1;i>=0;i--){
     const mn=minions[i];
@@ -1624,6 +1699,18 @@ function loop(t){
       p.m.position.x+=p.dir.x*p.sp*dt; p.m.position.z+=p.dir.z*p.sp*dt;
       p.vy+=p.g*dt; p.m.position.y+=p.vy*dt;
       if(p.m.position.y<=.2){ boom(p.m.position,1.7,p.dmg,p.owner); gone=true; }
+    } else if(p.type==='lob'){
+      p.t+=dt;
+      const q=Math.min(1,p.t/p.flight);
+      const h=3.8*q*(1-q);
+      p.m.position.x=p.start.x+(p.target.x-p.start.x)*q;
+      p.m.position.z=p.start.z+(p.target.z-p.start.z)*q;
+      p.m.position.y=.2+h;
+      if(q>=1){ boom(p.target,.95,p.dmg,p.owner); gone=true; }
+    } else if(p.type==='rekaShot'){
+      // Short, fast projectile: about 2.9 world units of reach.
+      p.m.position.addScaledVector(p.dir,p.sp*dt);
+      gone=hitTest(p);
     } else if(p.type==='homing'){
       let n=null,bd=Infinity;
       units.forEach(u=>{ if(u.alive&&u!==p.owner){ const d=fd(p.m.position,u.mesh.position); if(d<bd){bd=d;n=u;} } });
@@ -1694,7 +1781,8 @@ function bot(u,dt,now,t){
     u.mesh.rotation.y+=(Math.atan2(nd2.x,nd2.z)-u.mesh.rotation.y)*Math.min(1,dt*6);
     u.shootCd-=dt*1000;
     if(u.shootCd<=0&&bd<pref+3){
-      fire(u,nd2);
+      u._botTarget=tg.mesh.position.clone();
+      fire(u,nd2,u._botTarget);
       const base=Math.max(320,u.cfg.cd);
       u.shootCd=base*(settings.hard?1.1:1.4)+Math.random()*380;
     }
