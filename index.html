@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Human Game</title>
+<title>Human Game Beta Version 1.2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;800;900&family=Bungee&display=swap');
@@ -228,11 +228,11 @@ input[type=range]:focus{outline:none;}
 <div id="username-screen">
   <canvas class="anim-bg" id="bgUsername"></canvas>
   <div class="name-card">
-    <div class="nc-title">HUMAN GAME</div>
-    <div class="nc-sub">CHOOSE A USERNAME</div>
+    <div class="nc-title">HUMAN GAME BETA VERSION 1.2</div>
+    <div class="nc-sub">choose a username !!</div>
     <input id="usernameInput" maxlength="16" placeholder="type in a username...">
     <div class="name-err" id="usernameErr"></div>
-    <button class="big-btn" id="confirmNameBtn" style="width:100%;margin-top:6px;">CONFIRM</button>
+    <button class="big-btn" id="confirmNameBtn" style="width:100%;margin-top:6px;">CONFIRM USERNAME</button>
   </div>
 </div>
 
@@ -246,15 +246,15 @@ input[type=range]:focus{outline:none;}
   <div class="hub-inner">
     <div class="wordmark">
       <div class="wm-main">HUMAN<br><em>GAME</em></div>
-      <div class="wm-rule"><i></i><span>SHOWDOWN</span><i></i></div>
+      <div class="wm-rule"><i></i><span>Beta Version 1.2</span><i></i></div>
     </div>
-    <div class="coinbar">🪙 <span id="coinDisplay">0</span> COINS <span style="color:var(--muted);">·</span> <span id="charCountDisplay" style="color:var(--teal);">1/9</span></div>
+    <div class="coinbar">🪙 <span id="coinDisplay">0</span> Coins <span style="color:var(--muted);">·</span> <span id="charCountDisplay" style="color:var(--teal);">1/9</span></div>
     <div class="hub-grid">
-      <button class="hub-btn primary" data-go="start"><span class="ico">▶</span>START GAME<small id="playingAs">PLAYING AS VAEL</small></button>
-      <button class="hub-btn" data-go="chars"><span class="ico">☻</span>CHARACTERS<small>PICK YOUR BRAWLER</small></button>
+      <button class="hub-btn primary" data-go="start"><span class="ico">▶</span>Start Match<small id="playingAs">Playing as Vael</small></button>
+      <button class="hub-btn" data-go="chars"><span class="ico">☻</span>CHARACTERS<small>PICK YOUR CHARACTER</small></button>
       <button class="hub-btn" data-go="stash"><span class="ico">📦</span>STASH<small>SPEND COINS · REDEEM</small></button>
-      <button class="hub-btn" data-go="achv"><span class="ico">🏆</span>ACHIEVEMENTS<small>WIN 10 · GET REWARDS</small></button>
-      <button class="hub-btn" data-go="music"><span class="ico">♫</span>MUSIC<small>LOBBY TRACKS</small></button>
+      <button class="hub-btn" data-go="achv"><span class="ico">🏆</span>ACHIEVEMENTS<small>PLAY · GET REWARDS</small></button>
+      <button class="hub-btn" data-go="music"><span class="ico">♫</span>MUSICS<small>LOBBY TRACKS</small></button>
       <button class="hub-btn" data-go="settings"><span class="ico">⚙</span>SETTINGS<small>AUDIO · DIFFICULTY</small></button>
       <button class="hub-btn" data-go="support"><span class="ico">♥</span>SUPPORT<small>@RACKSDOUBLED</small></button>
     </div>
@@ -267,7 +267,7 @@ input[type=range]:focus{outline:none;}
   <button class="back-chip" data-back>&#10094; BACK</button>
   <div class="panel-inner">
     <div class="panel-title">CHARACTERS</div>
-    <div class="panel-sub">CHOOSE YOUR BRAWLER</div>
+    <div class="panel-sub">CHOOSE YOUR CHARACTER</div>
     <div class="carousel">
       <button class="chevron" id="prevChar">&#10094;</button>
       <div class="char-card">
@@ -340,7 +340,7 @@ input[type=range]:focus{outline:none;}
     <div class="toggle-row">CONTROL HINTS <div class="switch on" id="hintsSwitch"></div></div>
     <div class="toggle-row">HARD MODE <div class="switch" id="hardSwitch"></div></div>
     <div style="color:var(--muted);font-size:11px;font-weight:700;max-width:340px;text-align:center;margin-top:8px;line-height:1.5;">
-      Hard mode makes enemies shoot faster and hit harder. Progress is kept for this session.
+      Hard mode makes enemies shoot faster and hit harder. Progress is kept for this session. Nothing much tho.
     </div>
   </div>
 </div>
@@ -703,31 +703,31 @@ function buildRacks(){
 /* ---------- roster ---------- */
 const CHARACTERS = [
   {key:'vael',name:'Vael',rarity:'starter',accent:0xdfe3e8,hp:100,cd:750,dmg:22,atk:'boomerang',
-   desc:'The one you start with. Hurls his blade like a boomerang and shields up when it gets rough.',
+   desc:'This game is behind his lore, which remains hidden... not for too long...',
    atkName:'Blade Toss',ultName:'Guardian Wall',build:buildVael},
   {key:'szamoci',name:'Szamoci',rarity:'common',accent:0xff4f6d,hp:100,cd:950,dmg:24,atk:'arc',
-   desc:'Sweet and a little sour. Lobs berry bombs that pop for splash damage.',
+   desc:'Originally, the Creator wanted to be this Character.',
    atkName:'Berry Bomb',ultName:'Berry Storm',build:buildSzamoci},
   {key:'nyx',name:'Nyx',rarity:'common',accent:0x8a6bff,hp:90,cd:300,dmg:13,atk:'pierce',
-   desc:'A quiet shadow with starlight eyes. Her bolts punch straight through a crowd.',
+   desc:'She is an accident... sadly, I mean she supposted to be a bunny xD.',
    atkName:'Shadow Bolt',ultName:'Shadow Step',build:buildNyx},
   {key:'eribun',name:'Eribun',rarity:'common',accent:0xffc0cb,hp:95,cd:520,dmg:8,atk:'spread',
-   desc:'Bright-eyed and bouncy, with a homemade carrot blaster that sprays three shots at once.',
+   desc:'Shes the bunny, shes also an accident... nevermind xD.',
    atkName:'Carrot Spread',ultName:'Carrot Barrage',build:buildEribun},
   {key:'luna',name:'Luna',rarity:'common',accent:0x9fd8ff,hp:95,cd:700,dmg:18,atk:'homing',
-   desc:'Calm as moonlight. Her orb curves toward whoever it locks onto.',
+   desc:'Moon goddess, she doesnt participate in the lore, shes just a side character.',
    atkName:'Moon Orb',ultName:'Lunar Beam',build:buildLuna},
   {key:'emma',name:'Emma',rarity:'epic',accent:0xff5fb8,hp:170,cd:600,dmg:18,atk:'straight',
-   desc:'Built like a truck. Dash with SHIFT — barrel through someone and it hurts them badly.',
+   desc:'Shes the reason why the game has a lore behind... what a rat...',
    atkName:'Quick Jab',ultName:'Blink Away',build:buildEmma},
   {key:'reka',name:'Réka',rarity:'epic',accent:0xb15ad6,hp:70,cd:800,dmg:16,atk:'punch',
-   desc:'Fragile, but her partner does the fighting — a close-range double punch. Stay out of the open.',
+   desc:'Another important character in the lore, soon.',
    atkName:'Partner Combo',ultName:'Full Restore',build:buildReka},
   {key:'krisztian',name:'Krisztián',rarity:'legendary',accent:0xffc22e,hp:180,cd:700,dmg:20,atk:'random',
-   desc:'Some guy. Throws whatever he finds — mud, snot, a beer, or the school logo. Damage is a lottery.',
+   desc:'He was Vaels first friend, when he started a new school, hes a cool guy, i like him.',
    atkName:'Whatever He Finds',ultName:'Summon Ginger Kid',build:buildKrisztian},
   {key:'racksdoubled',name:'Racksdoubled',rarity:'celestial',accent:0x9d1f33,hp:240,cd:0,dmg:7,atk:'katana',
-   desc:'The creator. Tankiest in the game and there is no fire delay at all — spam the mouse and he spams katanas.',
+   desc:'The creator. One of the most important characters in the whole lore. My ultimate can instakill btw xD',
    atkName:'Katana Spam',ultName:'Meteor Drop',build:buildRacks}
 ];
 const byKey = k => CHARACTERS.find(c=>c.key===k);
@@ -735,7 +735,7 @@ const RANGE_PREF = {vael:3,szamoci:5.5,nyx:7.5,eribun:4.5,luna:7,emma:2.5,reka:1
 
 /* ---------- music ---------- */
 const TRACKS = [
-  {id:'human', name:'Human Music', el:'aHuman'},
+  {id:'human', name:'Human Music :)', el:'aHuman'},
   {id:'l2', name:'Lobby 2', el:'aL2'},
   {id:'l3', name:'Lobby 3', el:'aL3'},
   {id:'l4', name:'Lobby 4', el:'aL4'},
